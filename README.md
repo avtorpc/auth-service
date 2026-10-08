@@ -1,3 +1,11 @@
+## Очистка company/SMS — 8 октября 2026
+
+В схеме auth остаются users и refresh_tokens. users_companies_link удаляется Version20261008120000; старые company/SMS-модули и их API удалены. /user/me больше не читает и не возвращает company. Поля employerType/company текущей регистрации в users.profile сохраняются. Исторические миграции сохранены; чистая установка и обновление проверяются php tests/schema-cleanup-contract.php в контейнере auth_service_php.
+
+## Регистрация Место — 2026-10-07
+
+Актуальный сценарий email-регистрации, границы сервисов, настройки и проверки: [registration-mvp.md](../../docs/flows/registration-mvp.md). Прежние описания SMS-регистрации ниже относятся к старому проекту.
+
 # ONMI Backend — verification service
 
 ## Содержание

@@ -22,8 +22,6 @@ final class GetFirstTokenController
     public function __construct(
         private GetFirstTokenHandler $handler,
     ) {}
-
-    #[Route('/token/first', name:"GetFirstTokenRoute", methods: ['POST'])]
     public function __invoke(Request $request): JsonResponse
     {
         /**

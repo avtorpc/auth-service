@@ -158,41 +158,6 @@ services:
             $issuer: '%jwt.issuer%'
             $audience: '%jwt.audience_access_token%'
 
-# ------------------- SMS SIGN-IN -------------------
-    App\Application\Auth\SmsSignIn\:
-        resource: '../src/Application/Auth/SmsSignIn'
-        autowire: true
-        autoconfigure: true
-
-    App\Controller\Api\SmsSignIn\:
-        resource: '../src/Controller/Api/SmsSignIn'
-        autowire: true
-        autoconfigure: true
-
-    App\Infrastructure\Auth\SmsSignIn\LoginChallengeRedisStorage:
-        arguments:
-            $redis: '@redis'
-
-    App\Application\Auth\SmsSignIn\RequestSmsCodeService:
-        autowire: true
-        autoconfigure: true
-
-    App\Application\Auth\SmsSignIn\RequestSmsCodeHandler:
-        autowire: true
-        autoconfigure: true
-        arguments:
-            $smsPublisher: '@App\Infrastructure\EventPublisher\HttpSmsEventPublisher'
-
-    App\Infrastructure\EventPublisher\HttpSmsEventPublisher:
-        arguments:
-            $baseUrl: '%kafka_gateway_url%'
-            $smsSendPath: '%kafka_mail_send_path_api%'
-
-    # для контроллера который принимает sms в качестве пароля
-    App\Application\Auth\SmsSignIn\SmsChallengeService:
-        autowire: true
-        autoconfigure: true
-
     App\Infrastructure\EventPublisher\HttpKafkaEventPublisher:
         arguments:
             $baseUrl: '%kafka_gateway_url%'

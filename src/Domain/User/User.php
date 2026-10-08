@@ -24,7 +24,8 @@ final class User
         private $verificationChannelId,
         private string $createdAt,
         private string $updatedAt,
-        private array $roles = ['ROLE_USER']
+        private array $roles = ['ROLE_USER'],
+        private array $profile = []
     ) {}
 
     /**
@@ -116,6 +117,11 @@ final class User
     public function getRoles(): array
     {
         return $this->roles;
+    }
+
+    public function getProfile(): array
+    {
+        return $this->profile;
     }
 
     public function getPasswordHash(): string

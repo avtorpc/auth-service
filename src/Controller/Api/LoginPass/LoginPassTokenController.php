@@ -19,6 +19,7 @@ class LoginPassTokenController
 {
     public function __construct(
         private AuthLoginHandler $handler,
+        private \App\Infrastructure\Http\ClientIpResolver $clientIpResolver,
     ) {}
 
     #[Route('/sign-in', methods: ['POST'])]
@@ -39,14 +40,14 @@ class LoginPassTokenController
          */
         $command = AuthCommandMapper::mapRequestToCommand(
             $dto,
-            $request->getClientIp()
+            $this->clientIpResolver->resolve($request)
         );
 
         /**
          * 4. BUSINESS LOGIC
          */
         $context = new RequestContext(
-            ip: $request->getClientIp(),
+            ip: $this->clientIpResolver->resolve($request),
             uri: $request->getRequestUri(),
             method: $request->getMethod(),
             userAgent: $request->headers->get('User-Agent'),

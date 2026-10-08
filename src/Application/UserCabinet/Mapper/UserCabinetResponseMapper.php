@@ -13,7 +13,7 @@ final class UserCabinetResponseMapper
     ) {
     }
 
-    public function map(User $user, ?int $companyId): UserCabinetResponse
+    public function map(User $user): UserCabinetResponse
     {
         return new UserCabinetResponse(
             uuid: $user->getUuid(),
@@ -24,10 +24,10 @@ final class UserCabinetResponseMapper
             phoneNumber: $user->getPhoneNumber(),
             verificationChannelId: $user->getVerificationChannelId(),
             roles: $user->getRoles(),
-            companyId: $companyId,
             createdAt: $user->getCreatedAt(),
             updatedAt: $user->getUpdatedAt(),
             clock: $this->clock,
+            profile: $user->getProfile(),
         );
     }
 }

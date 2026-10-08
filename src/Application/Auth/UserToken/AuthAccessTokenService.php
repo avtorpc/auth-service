@@ -23,6 +23,7 @@ final class AuthAccessTokenService
         $payload = [
             'sub' => (string) $user->getUUID(),
             'email' => $user->getEmail(),
+            'roles' => $user->getRoles(),
 
             'iat' => $iat,
             'nbf' => $iat,

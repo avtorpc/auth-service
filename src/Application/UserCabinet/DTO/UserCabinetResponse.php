@@ -14,14 +14,14 @@ final class UserCabinetResponse
         private string $email,
         private string $firstName,
         private string $lastName,
-        private string $patronymic,
-        private string $phoneNumber,
+        private ?string $patronymic,
+        private ?string $phoneNumber,
         private string $verificationChannelId,
         private array $roles,
-        private ?int $companyId,
         private string $createdAt,
         private string $updatedAt,
         private ClockInterface $clock,
+        private array $profile = [],
     ) {
     }
 
@@ -39,7 +39,7 @@ final class UserCabinetResponse
                 'phoneNumber' => $this->phoneNumber,
                 'verificationChannelId' => $this->verificationChannelId,
                 'roles' => $this->roles,
-                'company' => $this->companyId,
+                'profile' => $this->profile,
                 'createdAt' => $this->createdAt,
                 'updatedAt' => $this->updatedAt,
             ],

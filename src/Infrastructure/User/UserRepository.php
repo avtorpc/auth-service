@@ -22,9 +22,9 @@ final class UserRepository
         $row = $this->connection->fetchAssociative(
             'SELECT *
              FROM ' . $this->schemaSqlHelper->table(self::TABLE) . '
-             WHERE email = :email
+             WHERE lower(email) = :email
              LIMIT 1',
-            ['email' => $email]
+            ['email' => strtolower(trim($email))]
         );
 
         return $row ? $this->mapRowToUser($row) : null;
@@ -81,7 +81,8 @@ final class UserRepository
             verificationChannelId: $row['verification_channel_id'] ?? null,
             createdAt: $row['created_at'] ?? null,
             updatedAt: $row['updated_at'] ?? null,
-            roles: ['ROLE_USER']
+            roles: [($row['role_code'] ?? 'applicant') === 'employer' ? 'ROLE_EMPLOYER' : 'ROLE_APPLICANT'],
+            profile: is_array($row['profile'] ?? null) ? $row['profile'] : json_decode($row['profile'] ?? '{}', true, 512, JSON_THROW_ON_ERROR)
         );
     }
     public function findByUuid(string $uuid): ?User

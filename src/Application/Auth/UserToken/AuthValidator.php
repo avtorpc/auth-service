@@ -52,7 +52,7 @@ final class AuthValidator
             );
         }
 
-        if (mb_strlen($password) > 25) {
+        if (strlen($password) > 72) {
             throw new BadRequestException(
                 'Password is too long',
                 ErrorCode::AUTH_BAD_REQUEST

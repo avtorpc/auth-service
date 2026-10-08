@@ -19,8 +19,6 @@ final class NewUserController
     public function __construct(
         private CreateUserHandler $handler
     ) {}
-
-    #[Route('/create/user', name:"NewUserCreateFromKafka", methods: ['POST'])]
     public function __invoke(Request $request): JsonResponse
     {
         $raw = NewUserJsonMapper::fromJson($request->getContent());

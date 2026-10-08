@@ -43,7 +43,7 @@ final class AuthDomainMapper
             self::fail($field, ErrorCode::AUTH_FIELD_MISSING);
         }
 
-        $value = trim($value);
+        $value = $field === 'password' ? $value : strtolower(trim($value));
 
         if ($value === '') {
             self::fail($field, ErrorCode::AUTH_FIELD_EMPTY);
