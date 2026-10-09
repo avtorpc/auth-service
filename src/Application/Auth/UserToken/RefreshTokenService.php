@@ -6,14 +6,12 @@ use App\Application\Auth\UserToken\DTO\RefreshTokenResult;
 use App\Domain\User\User;
 use App\Infrastructure\Auth\DbRefreshTokenRepository;
 use App\Shared\Time\ClockInterface;
-use DateInterval;
 
 final class RefreshTokenService
 {
     public function __construct(
         private DbRefreshTokenRepository $repository,
         private ClockInterface $clock,
-        private int $ttlDays = 30,
     ) {
     }
 
@@ -26,9 +24,7 @@ final class RefreshTokenService
 
         $tokenHash = hash('sha256', $rawToken);
 
-        $expiresAt = $this->clock
-            ->now()
-            ->add(new DateInterval(sprintf('P%dD', $this->ttlDays)));
+        $expiresAt = null;
 
         $this->repository->save(
             userId: $user->getId(),

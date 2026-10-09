@@ -22,86 +22,78 @@ final class RefreshTokenService
 
     public function refresh(RefreshTokenCommand $command, $context): object
     {
-        $rawToken = $command->refreshToken;
+        return $this->refreshTokenRepository->transactional(function () use ($command, $context): object {
+            $rawToken = $command->refreshToken;
 
-        /**
-         * 1. hash incoming token
-         */
-        $tokenHash = hash('sha256', $rawToken);
+            /**
+             * 1. hash incoming token
+             */
+            $tokenHash = hash('sha256', $rawToken);
 
-        /**
-         * 2. find refresh session
-         */
-        $session = $this->refreshTokenRepository->findByHash($tokenHash);
+            /**
+             * 2. find refresh session
+             */
+            $session = $this->refreshTokenRepository->findByHash($tokenHash, true);
 
-        if (!$session) {
-            throw new BadRequestException(
-                'Invalid refresh token',
-                ErrorCode::AUTH_INVALID_REFRESH_TOKEN
+            if (!$session) {
+                throw new BadRequestException(
+                    'Invalid refresh token',
+                    ErrorCode::AUTH_INVALID_REFRESH_TOKEN
+                );
+            }
+
+            /**
+             * 3. validate expiry
+             */
+            if ($session['expires_at'] !== null && new \DateTimeImmutable($session['expires_at'], new \DateTimeZone('UTC')) <= $this->clock->now()) {
+                throw new BadRequestException('Refresh token expired', ErrorCode::AUTH_TOKEN_EXPIRED);
+            }
+
+            if (!empty($session['revoked_at'])) {
+                throw new BadRequestException(
+                    'Refresh token revoked',
+                    ErrorCode::AUTH_TOKEN_REVOKED
+                );
+            }
+
+            /**
+             * 4. load user
+             */
+            $user = $this->userRepository->findById($session['user_id']);
+
+            if (!$user) {
+                throw new BadRequestException(
+                    'User not found',
+                    ErrorCode::AUTH_USER_NOT_FOUND
+                );
+            }
+
+            /**
+             * 5. generate new access token
+             */
+            $accessToken = $this->accessTokenService->createAccessToken($user);
+
+            /**
+             * 6. rotate refresh token
+             */
+            $newRefreshToken = bin2hex(random_bytes(64));
+            $newHash = hash('sha256', $newRefreshToken);
+
+            $this->refreshTokenRepository->rotate(
+                userId: $user->getId(),
+                oldHash: $tokenHash,
+                newHash: $newHash,
+                expiresAt: null,
             );
-        }
 
-        /**
-         * 3. validate expiry
-         */
-        $expiresAt = new \DateTimeImmutable(
-            $session['expires_at'],
-            new \DateTimeZone('UTC')
-        );
-
-        $now = $this->clock->now(); // уже UTC
-
-        if ($expiresAt < $now) {
-            throw new BadRequestException(
-                'Refresh token expired',
-                ErrorCode::AUTH_TOKEN_EXPIRED
-            );
-        }
-
-        if (!empty($session['revoked_at'])) {
-            throw new BadRequestException(
-                'Refresh token revoked',
-                ErrorCode::AUTH_TOKEN_REVOKED
-            );
-        }
-
-        /**
-         * 4. load user
-         */
-        $user = $this->userRepository->findById($session['user_id']);
-
-        if (!$user) {
-            throw new BadRequestException(
-                'User not found',
-                ErrorCode::AUTH_USER_NOT_FOUND
-            );
-        }
-
-        /**
-         * 5. generate new access token
-         */
-        $accessToken = $this->accessTokenService->createAccessToken($user);
-
-        /**
-         * 6. rotate refresh token
-         */
-        $newRefreshToken = bin2hex(random_bytes(64));
-        $newHash = hash('sha256', $newRefreshToken);
-
-        $this->refreshTokenRepository->rotate(
-            userId: $user->getId(),
-            oldHash: $tokenHash,
-            newHash: $newHash,
-            expiresAt: (clone $this->clock->now())->modify('+30 days'),
-        );
-
-        /**
-         * 7. Response DTO (still simple stdClass for now)
-         */
-        return (object)[
-            'accessToken' => $accessToken,
-            'refreshToken' => $newRefreshToken,
-            'expiresInSeconds' => $this->accessTokenService->getTtl(),
-        ];
+            /**
+             * 7. Response DTO (still simple stdClass for now)
+             */
+            return (object)[
+                'accessToken' => $accessToken,
+                'refreshToken' => $newRefreshToken,
+                'expiresInSeconds' => $this->accessTokenService->getTtl(),
+            ];
+        });
     }
 }

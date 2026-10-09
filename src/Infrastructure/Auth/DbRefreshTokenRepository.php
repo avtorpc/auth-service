@@ -19,19 +19,12 @@ final class DbRefreshTokenRepository
     public function save(
         int|string $userId,
         string $tokenHash,
-        \DateTimeImmutable $expiresAt,
+        ?\DateTimeImmutable $expiresAt,
     ): void {
         $now = $this->clock->now();
         $table = $this->schemaSqlHelper->table(self::TABLE);
 
-        // 1. удалить старый refresh token (1 активная сессия)
-        $this->connection->executeStatement(
-            "DELETE FROM {$table} WHERE user_id = :userId",
-            [
-                'userId' => $userId,
-            ]
-        );
-
+        // Each browser login owns a separate revocable refresh session.
         // 2. вставить новый
         $this->connection->insert(
             $table,
@@ -39,7 +32,7 @@ final class DbRefreshTokenRepository
                 'user_id' => $userId,
                 'refresh_token_hash' => $tokenHash,
 
-                'expires_at' => $expiresAt->format('Y-m-d H:i:s'),
+                'expires_at' => $expiresAt?->format('Y-m-d H:i:s'),
                 'revoked_at' => null,
 
                 'created_at' => $now->format('Y-m-d H:i:s'),
@@ -48,7 +41,7 @@ final class DbRefreshTokenRepository
         );
     }
 
-    public function findByHash(string $tokenHash): ?array
+    public function findByHash(string $tokenHash, bool $lock = false): ?array
     {
         $table = $this->schemaSqlHelper->table(self::TABLE);
 
@@ -63,7 +56,7 @@ final class DbRefreshTokenRepository
             updated_at
          FROM {$table}
          WHERE refresh_token_hash = :hash
-         LIMIT 1",
+         LIMIT 1".($lock ? " FOR UPDATE" : ""),
             [
                 'hash' => $tokenHash,
             ]
@@ -80,7 +73,7 @@ final class DbRefreshTokenRepository
         int|string $userId,
         string $oldHash,
         string $newHash,
-        \DateTimeImmutable $expiresAt
+        ?\DateTimeImmutable $expiresAt
     ): void {
         $now = $this->clock->now();
         $table = $this->schemaSqlHelper->table(self::TABLE);
@@ -90,15 +83,15 @@ final class DbRefreshTokenRepository
             "UPDATE {$table}
          SET refresh_token_hash = :newHash,
              expires_at = :expiresAt,
-             revoked_at = NULL,
              updated_at = :now
          WHERE user_id = :userId
-           AND refresh_token_hash = :oldHash",
+           AND refresh_token_hash = :oldHash
+           AND revoked_at IS NULL",
             [
                 'userId' => $userId,
                 'oldHash' => $oldHash,
                 'newHash' => $newHash,
-                'expiresAt' => $expiresAt->format('Y-m-d H:i:s'),
+                'expiresAt' => $expiresAt?->format('Y-m-d H:i:s'),
                 'now' => $now->format('Y-m-d H:i:s'),
             ]
         );
@@ -107,4 +100,18 @@ final class DbRefreshTokenRepository
             throw new \RuntimeException('Refresh token not found for rotate');
         }
     }
+    public function transactional(callable $operation): mixed
+    {
+        return $this->connection->transactional($operation);
+    }
+
+    public function revoke(string $rawToken): void
+    {
+        $table = $this->schemaSqlHelper->table(self::TABLE);
+        $this->connection->executeStatement(
+            "UPDATE {$table} SET revoked_at = :now, updated_at = :now WHERE refresh_token_hash = :hash AND revoked_at IS NULL",
+            ['hash' => hash('sha256', $rawToken), 'now' => $this->clock->now()->format('Y-m-d H:i:s')]
+        );
+    }
+
 }
